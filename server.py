@@ -2,6 +2,7 @@
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import os
 import cgi
+
 """
 Written by: Raymon Skjørten Hansen
 Email: raymon.s.hansen@uit.no
@@ -10,6 +11,8 @@ UiT - The Arctic University of Norway
 May 9th, 2019
 """
 input_list = []
+messages = []
+dict_form_data = dict()
 class requestHandler(BaseHTTPRequestHandler):
     """
     This class is responsible for handling a request. The whole class is
@@ -39,8 +42,18 @@ class requestHandler(BaseHTTPRequestHandler):
                 self.serve_file("index.html", "text/html")
             elif self.path.endswith(".py"):
                 self.send_forbidden()
+            elif self.path.endswith(".md"):
+                self.send_forbidden()
+            # if self.path == "/messages": #this is the restful API
+            #     self.send_response(200)
+            #     self.send_header("Content-Type", "application/json")
+            #     self.end_headers()
+            #     # Return the list of messages as a JSON response
+            #     self.wfile.write(json.dumps(messages).encode("utf-8"))
             else:
-                self.send_not_found()
+                # Serve other files within the allowed directory
+                filename = self.path[1:]  # Remove the leading "/"
+                self.serve_file(filename, "text/plain")  # Adjust content type if needed
         else:
             self.send_forbidden()
         """
@@ -49,39 +62,34 @@ class requestHandler(BaseHTTPRequestHandler):
         this method. But it all starts here!
         """
     def do_POST(self):
+        # Check if the file 'test.txt' exists
+        if not os.path.isfile('test.txt'):
+            # Create the file and write data to it
+            with open('test.txt', 'w') as file:
+                pass
         if self.is_safe_path(self.path):
-            if self.path.endswith('test.txt'):
+            print(self.path)
+            if self.path == "/test.txt":
                 try:
-                    # Parse the content type header
-                    ctype, pdict = cgi.parse_header(self.headers.get('Content-Type'))
-                    print(ctype, pdict)
-                    # Check if the content type is 'application/x-www-form-urlencoded'
-                    if ctype == 'application/x-www-form-urlencoded':
-                        # Read the content length
-                        content_length = int(self.headers.get('Content-Length'))
-
-                        # Parse the form data
-                        form_data = self.rfile.read(content_length).decode('utf-8')
-                        print(form_data)
-                        # Parse the form data into a dictionary
-                        fields = cgi.parse_qs(form_data)
-
-                        # Get the 'input_text' field value
-                        new_input = fields.get('input_text', [''])[0]
-
-                        # Append the input to the global input_list
-                        input_list.append(new_input)
-
-                        # Send a 301 redirect response
-                        self.send_response(301)
-                        self.send_header('Content-Type', 'text/html')
-                        self.send_header('Location', '/index.html')
-                        self.end_headers()
-                    else:
-                        # Handle other content types if needed
-                        self.send_error(400, "Bad Request: Unsupported Content-Type")
+                    content_length = int(self.headers.get('Content-Length'))
+                    post_data = self.rfile.read(content_length)
+                    print(post_data)
+                    
+                    # If the file exists, append data to it
+                    with open('test.txt', 'a') as file:
+                        file.write(post_data.decode('utf-8')[5:])
+                        
+                    # Read the complete contents of the file
+                    with open('test.txt', 'r') as file:
+                        file_contents = file.read()
+                        
+                    # Return the updated file contents in the response with status 200 (OK)
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/plain")
+                    self.send_header("Content-Length", str(len(file_contents)))
+                    self.end_headers()
+                    self.wfile.write(file_contents.encode('utf-8'))
                 except Exception as e:
-                    # Handle exceptions
                     self.send_error(500, f"Internal Server Error: {str(e)}")
             else:
                 self.send_forbidden()
@@ -104,24 +112,23 @@ class requestHandler(BaseHTTPRequestHandler):
     def is_safe_path(self, path):
         # Check if the path is within the allowed directory
         base_path = os.path.abspath(os.path.dirname(__file__))
+        print(base_path)
         requested_path = os.path.abspath(os.path.join(base_path, path[1:]))
+        print(requested_path)
         return requested_path.startswith(base_path)
     def send_not_found(self):
         self.send_response(404)
-        self.send_header("Content-Type", "text/plain")
-        self.send_header("Content-Length", "9")
+        self.send_header("Content-Type", "text/html")
         self.end_headers()
-        self.wfile.write(b"Not Found")
+        self.wfile.write(b"<html><body>404 - Not Found</body></html>")
     def send_forbidden(self):
         self.send_response(403)
-        self.send_header("Content-Type", "text/plain")
-        self.send_header("Content-Length", "9")
+        self.send_header("Content-Type", "text/html")
         self.end_headers()
-        self.wfile.write(b"Forbidden")
+        self.wfile.write(b"<html><body>403 - Forbidden</body></html>")
 if __name__ == "__main__":
     HOST, PORT = "localhost", 8080
     server_address= HOST, PORT
-
     server = HTTPServer(server_address,requestHandler)
     print("Serving at: http://{}:{}".format(HOST, PORT))
     server.serve_forever()

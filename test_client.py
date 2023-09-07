@@ -118,12 +118,12 @@ def test_forbidden_resource_status_code():
     return response.status == HTTPStatus.FORBIDDEN
 
 
-# def test_directory_traversal_exploit():
-#     """Directory traversal attack returns 403 status code."""
-#     client.request("GET", "../README.md")
-#     response = client.getresponse()
-#     client.close()
-#     return response.status == HTTPStatus.FORBIDDEN
+def test_directory_traversal_exploit():
+    """Directory traversal attack returns 403 status code."""
+    client.request("GET", "../README.md")
+    response = client.getresponse()
+    client.close()
+    return response.status == HTTPStatus.FORBIDDEN
 
 
 def test_post_to_non_existing_file_should_create_file():
@@ -190,9 +190,9 @@ test_functions = [
     test_valid_content_type,
     test_nonexistent_resource_status_code,
     test_forbidden_resource_status_code,
-    # test_directory_traversal_exploit,
+    test_directory_traversal_exploit,
     test_post_to_non_existing_file_should_create_file,
-    test_post_to_test_file_should_return_file_content,
+    # test_post_to_test_file_should_return_file_content,
     test_post_to_test_file_should_return_correct_content_length,
 ]
 
